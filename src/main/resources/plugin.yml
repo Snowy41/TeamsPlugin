@@ -1,0 +1,57 @@
+name: TeamsPlugin
+version: 2.0
+main: com.mcbzh.teams.TeamsPlugin
+api-version: 1.21
+author: mcbzh
+description: Enhanced team management plugin with stash and team chat
+
+commands:
+  team:
+    description: Main team command
+    usage: |
+      /<command> - Show help
+      /<command> create <name> - Create a new team
+      /<command> list - View all teams
+      /<command> info [team] - View team information
+      /<command> manage - Manage your team (GUI)
+      /<command> stash - Open team storage
+      /<command> chat - Toggle team chat mode
+      /<command> invite <player> - Invite a player to your team
+      /<command> join <team> - Join a team you've been invited to
+      /<command> leave - Leave your current team
+      /<command> kick <player> - Kick a member from your team
+      /<command> promote <player> - Promote a member to moderator
+      /<command> demote <player> - Demote a moderator
+      /<command> top [kills|kd] - View top teams
+      /<command> disband - Disband your team (leader only)
+      /<command> color <color> - Change team color (leader only)
+      /<command> tag <tag> - Change team tag (leader only)
+      /<command> description <text> - Change team description (leader only)
+      /<command> transfer <player> - Transfer leadership (leader only)
+    aliases: [t, teams]
+    permission: teams.use
+    permission-message: You don't have permission to use teams!
+
+  tc:
+    description: Team chat command
+    usage: |
+      /<command> - Toggle team chat mode
+      /<command> <message> - Send a team message
+    aliases: [teamchat]
+    permission: teams.use
+
+permissions:
+  teams.*:
+    description: Gives access to all team commands
+    default: op
+    children:
+      teams.use: true
+      teams.admin: true
+
+  teams.use:
+    description: Allows basic team usage
+    default: true
+
+  teams.admin:
+    description: Allows administrative team management
+    default: op

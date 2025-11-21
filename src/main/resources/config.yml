@@ -1,0 +1,109 @@
+# Teams Plugin Configuration for 1.21.10
+# ========================================
+
+# Team Settings
+team-settings:
+  # Maximum number of members per team (can be changed per-team by leaders)
+  default-max-members: 10
+
+  # Minimum team name length
+  min-team-name-length: 3
+
+  # Maximum team name length
+  max-team-name-length: 16
+
+  # Minimum team tag length
+  min-team-tag-length: 2
+
+  # Maximum team tag length
+  max-team-tag-length: 6
+
+  # Allow team colors in chat
+  colored-names: true
+
+  # Team invitations expire after X minutes
+  invitation-expiry-minutes: 5
+
+# Nametag Settings
+nametag-settings:
+  # Enable team tags above player heads
+  enabled: true
+
+  # Show team tag in tablist
+  show-in-tablist: true
+
+  # Format: [TAG] PlayerName or TAG PlayerName
+  use-brackets: true
+
+  # Refresh nametags every X seconds (0 to disable)
+  refresh-interval: 30
+
+# Friendly Fire Protection
+friendly-fire:
+  # Enable friendly fire protection by default for new teams
+  default-enabled: false
+
+  # Prevent team damage in these worlds (world names)
+  protected-worlds:
+    - world
+    - world_nether
+    - world_the_end
+
+# Team Statistics
+statistics:
+  # Track team kills and deaths
+  enabled: true
+
+  # Count kills from PvP only
+  pvp-only: true
+
+  # Update leaderboards every X minutes
+  leaderboard-update-interval: 5
+
+# Messages
+messages:
+  prefix: "&8[&6Teams&8]&r "
+
+  team-created: "&aSuccessfully created team: {team}"
+  team-disbanded: "&cTeam {team} has been disbanded"
+
+  player-joined: "&e{player} has joined your team!"
+  player-left: "&e{player} has left the team"
+  player-kicked: "&c{player} was kicked from the team"
+
+  invited: "&aYou invited {player} to your team!"
+  invitation-received: "&6You've been invited to join {team}!"
+
+  not-in-team: "&cYou are not in a team!"
+  already-in-team: "&cYou are already in a team!"
+  team-full: "&cThat team is full!"
+
+  no-permission-leader: "&cOnly the team leader can do that!"
+  no-permission-moderator: "&cOnly team moderators can do that!"
+
+# GUI Settings
+gui:
+  # Use custom textures for GUI (requires resource pack)
+  custom-textures: false
+
+  # Refresh GUI every X seconds when open
+  auto-refresh-seconds: 3
+
+  # Items per page in team list
+  teams-per-page: 28
+
+# Performance
+performance:
+  # Save teams to disk every X minutes
+  auto-save-interval: 5
+
+  # Cache team data in memory
+  enable-caching: true
+
+# Debug
+debug:
+  # Enable debug logging
+  enabled: false
+
+  # Log all team events
+  log-events: false

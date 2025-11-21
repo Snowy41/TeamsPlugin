@@ -89,6 +89,19 @@ public class TeamCommand implements CommandExecutor, TabCompleter {
                 return handleDescription(player, args);
             case "transfer":
                 return handleTransfer(player, args);
+            case "ally":
+                return handleAlly(player, args);
+            case "allyaccept":
+            case "acceptally":
+                return handleAllyAccept(player, args);
+            case "allyremove":
+            case "removeally":
+                return handleAllyRemove(player, args);
+            case "allylist":
+                return handleAllyList(player);
+            case "allypermissions":
+            case "allyperm":
+                return handleAllyPermissions(player);
             case "help":
             default:
                 sendHelpMessage(player);
@@ -130,6 +143,221 @@ public class TeamCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(ChatColor.GREEN + "Successfully created team: " + team.getColoredName());
         player.sendMessage(ChatColor.YELLOW + "Use " + ChatColor.WHITE + "/team manage" +
                 ChatColor.YELLOW + " to configure your team!");
+
+        return true;
+    }
+
+
+    // Add these new methods to handle ally commands:
+
+    private boolean handleAlly(Player player, String[] args) {
+        Team team = teamManager.getPlayerTeam(player.getUniqueId());
+
+        if (team == null) {
+            player.sendMessage(ChatColor.RED + "You are not in a team!");
+            return true;
+        }
+
+        if (!team.isLeader(player.getUniqueId()) && !team.isModerator(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Only team leaders and moderators can manage allies!");
+            return true;
+        }
+
+        if (!team.isAllowAlliances()) {
+            player.sendMessage(ChatColor.RED + "Your team doesn't allow alliances!");
+            return true;
+        }
+
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "Usage: /team ally <team name>");
+            return true;
+        }
+
+        String targetTeamName = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+        Team targetTeam = teamManager.getTeamByName(targetTeamName);
+
+        if (targetTeam == null) {
+            player.sendMessage(ChatColor.RED + "Team not found!");
+            return true;
+        }
+
+        if (targetTeam.equals(team)) {
+            player.sendMessage(ChatColor.RED + "You cannot ally with your own team!");
+            return true;
+        }
+
+        if (team.isAlly(targetTeam.getId())) {
+            player.sendMessage(ChatColor.RED + "You are already allies with " + targetTeam.getColoredName() + "!");
+            return true;
+        }
+
+        if (!targetTeam.isAllowAlliances()) {
+            player.sendMessage(ChatColor.RED + "That team doesn't allow alliances!");
+            return true;
+        }
+
+        // Send ally invitation
+        team.sendAllyInvite(targetTeam.getId());
+        targetTeam.sendAllyInvite(team.getId()); // Store invite on both sides
+
+        player.sendMessage(ChatColor.GREEN + "Sent ally request to " + targetTeam.getColoredName() + "!");
+
+        // Notify target team leaders and moderators
+        teamManager.broadcastToTeamLeadership(targetTeam,
+                ChatColor.GOLD + "╔═══════════════════════════════╗");
+        teamManager.broadcastToTeamLeadership(targetTeam,
+                ChatColor.YELLOW + team.getColoredName() + " wants to be allies!");
+        teamManager.broadcastToTeamLeadership(targetTeam,
+                ChatColor.GRAY + "Use " + ChatColor.WHITE + "/team allyaccept " + team.getName() +
+                        ChatColor.GRAY + " to accept");
+        teamManager.broadcastToTeamLeadership(targetTeam,
+                ChatColor.GRAY + "Request expires in 5 minutes");
+        teamManager.broadcastToTeamLeadership(targetTeam,
+                ChatColor.GOLD + "╚═══════════════════════════════╝");
+
+        return true;
+    }
+
+    private boolean handleAllyAccept(Player player, String[] args) {
+        Team team = teamManager.getPlayerTeam(player.getUniqueId());
+
+        if (team == null) {
+            player.sendMessage(ChatColor.RED + "You are not in a team!");
+            return true;
+        }
+
+        if (!team.isLeader(player.getUniqueId()) && !team.isModerator(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Only team leaders and moderators can accept ally requests!");
+            return true;
+        }
+
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "Usage: /team allyaccept <team name>");
+            return true;
+        }
+
+        String targetTeamName = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+        Team targetTeam = teamManager.getTeamByName(targetTeamName);
+
+        if (targetTeam == null) {
+            player.sendMessage(ChatColor.RED + "Team not found!");
+            return true;
+        }
+
+        if (!targetTeam.hasAllyInvite(team.getId())) {
+            player.sendMessage(ChatColor.RED + "You don't have an ally request from " +
+                    targetTeam.getColoredName() + "!");
+            return true;
+        }
+
+        // Form alliance (mutual)
+        team.addAlly(targetTeam.getId());
+        targetTeam.addAlly(team.getId());
+
+        teamManager.saveTeams();
+
+        // Notify both teams
+        teamManager.broadcastToTeam(team,
+                ChatColor.GREEN + "✓ You are now allies with " + targetTeam.getColoredName() + "!");
+        teamManager.broadcastToTeam(targetTeam,
+                ChatColor.GREEN + "✓ You are now allies with " + team.getColoredName() + "!");
+
+        return true;
+    }
+
+    private boolean handleAllyRemove(Player player, String[] args) {
+        Team team = teamManager.getPlayerTeam(player.getUniqueId());
+
+        if (team == null) {
+            player.sendMessage(ChatColor.RED + "You are not in a team!");
+            return true;
+        }
+
+        if (!team.isLeader(player.getUniqueId()) && !team.isModerator(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Only team leaders and moderators can remove allies!");
+            return true;
+        }
+
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "Usage: /team allyremove <team name>");
+            return true;
+        }
+
+        String targetTeamName = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+        Team targetTeam = teamManager.getTeamByName(targetTeamName);
+
+        if (targetTeam == null) {
+            player.sendMessage(ChatColor.RED + "Team not found!");
+            return true;
+        }
+
+        if (!team.isAlly(targetTeam.getId())) {
+            player.sendMessage(ChatColor.RED + "You are not allies with " + targetTeam.getColoredName() + "!");
+            return true;
+        }
+
+        // Remove alliance (mutual)
+        team.removeAlly(targetTeam.getId());
+        targetTeam.removeAlly(team.getId());
+
+        teamManager.saveTeams();
+
+        // Notify both teams
+        teamManager.broadcastToTeam(team,
+                ChatColor.YELLOW + "Alliance with " + targetTeam.getColoredName() + " has been broken");
+        teamManager.broadcastToTeam(targetTeam,
+                ChatColor.YELLOW + "Alliance with " + team.getColoredName() + " has been broken");
+
+        return true;
+    }
+
+    private boolean handleAllyList(Player player) {
+        Team team = teamManager.getPlayerTeam(player.getUniqueId());
+
+        if (team == null) {
+            player.sendMessage(ChatColor.RED + "You are not in a team!");
+            return true;
+        }
+
+        Set<UUID> allies = team.getAllies();
+
+        if (allies.isEmpty()) {
+            player.sendMessage(ChatColor.YELLOW + "Your team has no allies");
+            return true;
+        }
+
+        player.sendMessage(ChatColor.GOLD + "╔═══════════════════════════════╗");
+        player.sendMessage(ChatColor.YELLOW + "      Team Allies");
+        player.sendMessage(ChatColor.GOLD + "╠═══════════════════════════════╣");
+
+        for (UUID allyId : allies) {
+            Team allyTeam = teamManager.getTeam(allyId);
+            if (allyTeam != null) {
+                player.sendMessage(ChatColor.WHITE + "• " + allyTeam.getColoredName() +
+                        ChatColor.GRAY + " (" + allyTeam.getMemberCount() + " members)");
+            }
+        }
+
+        player.sendMessage(ChatColor.GOLD + "╚═══════════════════════════════╝");
+
+        return true;
+    }
+
+    private boolean handleAllyPermissions(Player player) {
+        Team team = teamManager.getPlayerTeam(player.getUniqueId());
+
+        if (team == null) {
+            player.sendMessage(ChatColor.RED + "You are not in a team!");
+            return true;
+        }
+
+        if (!team.isLeader(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Only the team leader can manage ally permissions!");
+            return true;
+        }
+
+        // Open GUI for ally permissions
+        teamManageGUI.openAllyPermissionsMenu(player, team);
 
         return true;
     }
@@ -663,6 +891,12 @@ public class TeamCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(ChatColor.AQUA + "/team join <team>" + ChatColor.GRAY + " - Join team");
         player.sendMessage(ChatColor.AQUA + "/team leave" + ChatColor.GRAY + " - Leave team");
         player.sendMessage(ChatColor.AQUA + "/team top [kills|kd]" + ChatColor.GRAY + " - Top teams");
+        player.sendMessage(ChatColor.GOLD + "╠═══════════════════════════════╣");
+        player.sendMessage(ChatColor.LIGHT_PURPLE + "/team ally <team>" + ChatColor.GRAY + " - Request alliance");
+        player.sendMessage(ChatColor.LIGHT_PURPLE + "/team allyaccept <team>" + ChatColor.GRAY + " - Accept alliance");
+        player.sendMessage(ChatColor.LIGHT_PURPLE + "/team allyremove <team>" + ChatColor.GRAY + " - Remove ally");
+        player.sendMessage(ChatColor.LIGHT_PURPLE + "/team allylist" + ChatColor.GRAY + " - List allies");
+        player.sendMessage(ChatColor.LIGHT_PURPLE + "/team allypermissions" + ChatColor.GRAY + " - Manage ally perms");
         player.sendMessage(ChatColor.GOLD + "╚═══════════════════════════════╝");
     }
 
@@ -673,7 +907,8 @@ public class TeamCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             completions.addAll(Arrays.asList("create", "list", "info", "manage", "invite",
                     "join", "leave", "kick", "promote", "demote", "top", "disband", "color",
-                    "tag", "description", "transfer", "chat", "stash", "help"));
+                    "tag", "description", "transfer", "chat", "stash", "help",
+                    "ally", "allyaccept", "allyremove", "allylist", "allypermissions"));
 
             return completions.stream()
                     .filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase()))
@@ -681,6 +916,15 @@ public class TeamCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 2) {
+
+            if (args[0].equalsIgnoreCase("ally") || args[0].equalsIgnoreCase("allyaccept") ||
+                    args[0].equalsIgnoreCase("allyremove")) {
+                return teamManager.getAllTeams().stream()
+                        .map(Team::getName)
+                        .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+
             if (args[0].equalsIgnoreCase("top")) {
                 return Arrays.asList("kills", "kd");
             }
@@ -704,6 +948,8 @@ public class TeamCommand implements CommandExecutor, TabCompleter {
                         .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                         .collect(Collectors.toList());
             }
+
+
         }
 
         return completions;

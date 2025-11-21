@@ -191,7 +191,7 @@ public class TeamManageGUI {
                         (team.isFriendlyFire() ? ChatColor.RED + "Enabled" : ChatColor.GREEN + "Disabled"),
                 "",
                 ChatColor.WHITE + "Click to toggle");
-        inv.setItem(20, ff);
+        inv.setItem(19, ff);
 
         // Change team color
         ItemStack color = createItem(Material.INK_SAC,
@@ -199,7 +199,7 @@ public class TeamManageGUI {
                 ChatColor.GRAY + "Current: " + team.getColor() + team.getColor().name(),
                 "",
                 ChatColor.WHITE + "Click to change");
-        inv.setItem(22, color);
+        inv.setItem(21, color);
 
         // Change description
         ItemStack desc = createItem(Material.WRITABLE_BOOK,
@@ -208,7 +208,7 @@ public class TeamManageGUI {
                 ChatColor.WHITE + team.getDescription(),
                 "",
                 ChatColor.WHITE + "Click to change");
-        inv.setItem(24, desc);
+        inv.setItem(23, desc);
 
         // Max members
         ItemStack maxMembers = createItem(Material.PLAYER_HEAD,
@@ -217,7 +217,41 @@ public class TeamManageGUI {
                 "",
                 ChatColor.GREEN + "Left click: +1",
                 ChatColor.RED + "Right click: -1");
-        inv.setItem(31, maxMembers);
+        inv.setItem(25, maxMembers);
+
+        // Allow alliances toggle
+        ItemStack alliances = createItem(
+                team.isAllowAlliances() ? Material.EMERALD : Material.BARRIER,
+                ChatColor.LIGHT_PURPLE + "Allow Alliances",
+                ChatColor.GRAY + "Current: " +
+                        (team.isAllowAlliances() ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled"),
+                "",
+                ChatColor.GRAY + "When disabled, your team cannot",
+                ChatColor.GRAY + "form new alliances",
+                "",
+                ChatColor.WHITE + "Click to toggle");
+        inv.setItem(28, alliances);
+
+        // Ally permissions
+        ItemStack allyPerms = createItem(Material.WRITABLE_BOOK,
+                ChatColor.LIGHT_PURPLE + "Ally Permissions",
+                ChatColor.GRAY + "Configure what allies can do",
+                ChatColor.GRAY + "in your team's claims",
+                "",
+                ChatColor.YELLOW + "Current allies: " + team.getAllies().size(),
+                "",
+                ChatColor.WHITE + "Click to configure");
+        inv.setItem(30, allyPerms);
+
+        // View allies
+        ItemStack viewAllies = createItem(Material.DIAMOND,
+                ChatColor.AQUA + "View Allies",
+                ChatColor.GRAY + "See all allied teams",
+                "",
+                ChatColor.YELLOW + "Total: " + team.getAllies().size(),
+                "",
+                ChatColor.WHITE + "Click to view");
+        inv.setItem(32, viewAllies);
 
         // Transfer leadership
         ItemStack transfer = createItem(Material.GOLDEN_HELMET,
@@ -231,6 +265,124 @@ public class TeamManageGUI {
         ItemStack back = createItem(Material.ARROW,
                 ChatColor.YELLOW + "Back",
                 ChatColor.GRAY + "Return to team management");
+        inv.setItem(45, back);
+
+        player.openInventory(inv);
+    }
+
+
+    public void openAllyPermissionsMenu(Player player, Team team) {
+        if (!team.isLeader(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Only the team leader can manage ally permissions!");
+            return;
+        }
+
+        Inventory inv = Bukkit.createInventory(null, 54,
+                ChatColor.DARK_PURPLE + "Ally Permissions");
+
+        addBorderGlass(inv);
+
+        Team.AllyPermissions perms = team.getAllyPermissions();
+
+        // Info item
+        ItemStack info = createItem(Material.BOOK,
+                ChatColor.GOLD + "Ally Permissions",
+                ChatColor.GRAY + "Configure what allied teams",
+                ChatColor.GRAY + "can do in your claims",
+                "",
+                ChatColor.YELLOW + "⚠ These apply to ALL allies");
+        inv.setItem(4, info);
+
+        // Break blocks
+        ItemStack breakBlocks = createItem(
+                perms.canBreakBlocks() ? Material.DIAMOND_PICKAXE : Material.WOODEN_PICKAXE,
+                ChatColor.YELLOW + "Break Blocks",
+                ChatColor.GRAY + "Status: " +
+                        (perms.canBreakBlocks() ? ChatColor.GREEN + "✓ Allowed" : ChatColor.RED + "✗ Denied"),
+                "",
+                ChatColor.WHITE + "Click to toggle");
+        inv.setItem(19, breakBlocks);
+
+        // Place blocks
+        ItemStack placeBlocks = createItem(
+                perms.canPlaceBlocks() ? Material.GRASS_BLOCK : Material.BARRIER,
+                ChatColor.YELLOW + "Place Blocks",
+                ChatColor.GRAY + "Status: " +
+                        (perms.canPlaceBlocks() ? ChatColor.GREEN + "✓ Allowed" : ChatColor.RED + "✗ Denied"),
+                "",
+                ChatColor.WHITE + "Click to toggle");
+        inv.setItem(21, placeBlocks);
+
+        // Use containers
+        ItemStack containers = createItem(
+                perms.canUseContainers() ? Material.CHEST : Material.ENDER_CHEST,
+                ChatColor.YELLOW + "Use Containers",
+                ChatColor.GRAY + "Chests, furnaces, etc.",
+                ChatColor.GRAY + "Status: " +
+                        (perms.canUseContainers() ? ChatColor.GREEN + "✓ Allowed" : ChatColor.RED + "✗ Denied"),
+                "",
+                ChatColor.WHITE + "Click to toggle");
+        inv.setItem(23, containers);
+
+        // Use doors
+        ItemStack doors = createItem(
+                perms.canUseDoors() ? Material.OAK_DOOR : Material.IRON_DOOR,
+                ChatColor.YELLOW + "Use Doors & Gates",
+                ChatColor.GRAY + "Doors, trapdoors, gates",
+                ChatColor.GRAY + "Status: " +
+                        (perms.canUseDoors() ? ChatColor.GREEN + "✓ Allowed" : ChatColor.RED + "✗ Denied"),
+                "",
+                ChatColor.WHITE + "Click to toggle");
+        inv.setItem(25, doors);
+
+        // Interact with entities
+        ItemStack entities = createItem(
+                perms.canInteractEntities() ? Material.LEAD : Material.BARRIER,
+                ChatColor.YELLOW + "Interact with Entities",
+                ChatColor.GRAY + "Animals, villagers, etc.",
+                ChatColor.GRAY + "Status: " +
+                        (perms.canInteractEntities() ? ChatColor.GREEN + "✓ Allowed" : ChatColor.RED + "✗ Denied"),
+                "",
+                ChatColor.WHITE + "Click to toggle");
+        inv.setItem(28, entities);
+
+        // Use buckets
+        ItemStack buckets = createItem(
+                perms.canUseBuckets() ? Material.WATER_BUCKET : Material.BUCKET,
+                ChatColor.YELLOW + "Use Buckets",
+                ChatColor.GRAY + "Water, lava buckets",
+                ChatColor.GRAY + "Status: " +
+                        (perms.canUseBuckets() ? ChatColor.GREEN + "✓ Allowed" : ChatColor.RED + "✗ Denied"),
+                "",
+                ChatColor.WHITE + "Click to toggle");
+        inv.setItem(30, buckets);
+
+        // Use buttons
+        ItemStack buttons = createItem(
+                perms.canUseButtons() ? Material.STONE_BUTTON : Material.BARRIER,
+                ChatColor.YELLOW + "Use Buttons & Levers",
+                ChatColor.GRAY + "Redstone components",
+                ChatColor.GRAY + "Status: " +
+                        (perms.canUseButtons() ? ChatColor.GREEN + "✓ Allowed" : ChatColor.RED + "✗ Denied"),
+                "",
+                ChatColor.WHITE + "Click to toggle");
+        inv.setItem(32, buttons);
+
+        // Preset buttons
+        ItemStack allowAll = createItem(Material.EMERALD_BLOCK,
+                ChatColor.GREEN + "Allow All",
+                ChatColor.GRAY + "Enable all permissions");
+        inv.setItem(48, allowAll);
+
+        ItemStack denyAll = createItem(Material.REDSTONE_BLOCK,
+                ChatColor.RED + "Deny All",
+                ChatColor.GRAY + "Disable all permissions");
+        inv.setItem(50, denyAll);
+
+        // Back button
+        ItemStack back = createItem(Material.ARROW,
+                ChatColor.YELLOW + "Back",
+                ChatColor.GRAY + "Return to team settings");
         inv.setItem(45, back);
 
         player.openInventory(inv);

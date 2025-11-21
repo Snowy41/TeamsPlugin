@@ -69,6 +69,9 @@ public class GUIListener implements Listener {
         else if (title.contains("Settings")) {
             handleSettingsClick(player, clicked, event.getClick());
         }
+        else if (title.contains("Ally Permissions")) {
+            handleAllyPermissionsClick(player, clicked);
+        }
     }
 
     private void handleTeamListClick(Player player, ItemStack clicked, String title) {
@@ -308,6 +311,23 @@ public class GUIListener implements Listener {
             case "Back":
                 teamManageGUI.openTeamManageMenu(player);
                 break;
+
+            case "Allow Alliances":
+                team.setAllowAlliances(!team.isAllowAlliances());
+                teamManager.saveTeams();
+                player.sendMessage(ChatColor.GREEN + "Alliances " +
+                        (team.isAllowAlliances() ? "enabled" : "disabled") + "!");
+                teamManageGUI.openSettingsMenu(player, team);
+                break;
+
+            case "Ally Permissions":
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "View Allies":
+                player.closeInventory();
+                Bukkit.dispatchCommand(player, "team allylist");
+                break;
         }
     }
 
@@ -319,6 +339,89 @@ public class GUIListener implements Listener {
         }
         return 1;
     }
+
+    private void handleAllyPermissionsClick(Player player, ItemStack clicked) {
+        Team team = teamManager.getPlayerTeam(player.getUniqueId());
+        if (team == null || !team.isLeader(player.getUniqueId())) return;
+
+        String displayName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        Team.AllyPermissions perms = team.getAllyPermissions();
+
+        switch (displayName) {
+            case "Break Blocks":
+                perms.setCanBreakBlocks(!perms.canBreakBlocks());
+                teamManager.saveTeams();
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "Place Blocks":
+                perms.setCanPlaceBlocks(!perms.canPlaceBlocks());
+                teamManager.saveTeams();
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "Use Containers":
+                perms.setCanUseContainers(!perms.canUseContainers());
+                teamManager.saveTeams();
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "Use Doors & Gates":
+                perms.setCanUseDoors(!perms.canUseDoors());
+                teamManager.saveTeams();
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "Interact with Entities":
+                perms.setCanInteractEntities(!perms.canInteractEntities());
+                teamManager.saveTeams();
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "Use Buckets":
+                perms.setCanUseBuckets(!perms.canUseBuckets());
+                teamManager.saveTeams();
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "Use Buttons & Levers":
+                perms.setCanUseButtons(!perms.canUseButtons());
+                teamManager.saveTeams();
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "Allow All":
+                perms.setCanBreakBlocks(true);
+                perms.setCanPlaceBlocks(true);
+                perms.setCanUseContainers(true);
+                perms.setCanUseDoors(true);
+                perms.setCanInteractEntities(true);
+                perms.setCanUseBuckets(true);
+                perms.setCanUseButtons(true);
+                teamManager.saveTeams();
+                player.sendMessage(ChatColor.GREEN + "Enabled all ally permissions!");
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "Deny All":
+                perms.setCanBreakBlocks(false);
+                perms.setCanPlaceBlocks(false);
+                perms.setCanUseContainers(false);
+                perms.setCanUseDoors(false);
+                perms.setCanInteractEntities(false);
+                perms.setCanUseBuckets(false);
+                perms.setCanUseButtons(false);
+                teamManager.saveTeams();
+                player.sendMessage(ChatColor.RED + "Disabled all ally permissions!");
+                teamManageGUI.openAllyPermissionsMenu(player, team);
+                break;
+
+            case "Back":
+                teamManageGUI.openSettingsMenu(player, team);
+                break;
+        }
+    }
+
 
     private Team findTeamByDisplayName(ItemStack item) {
         if (!item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) {

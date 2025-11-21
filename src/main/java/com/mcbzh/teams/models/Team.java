@@ -1,7 +1,6 @@
 package com.mcbzh.teams.models;
 
 import org.bukkit.ChatColor;
-import org.bukkit.OfflinePlayer;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -10,7 +9,7 @@ public class Team {
     private final UUID id;
     private String name;
     private String displayName;
-    private String tag; // New: Team tag (e.g., "[RED]")
+    private String tag;
     private ChatColor color;
     private UUID leader;
     private final Set<UUID> members;
@@ -25,6 +24,11 @@ public class Team {
     // Statistics
     private int totalKills;
     private int totalDeaths;
+
+    // Ally System
+    private final Set<UUID> allies; // Team IDs that are allies
+    private final Map<UUID, Long> allyInvites; // Pending ally invitations (Team ID -> timestamp)
+    private final AllyPermissions allyPermissions; // Permissions for allies
 
     public Team(String name, UUID leader) {
         this.id = UUID.randomUUID();
@@ -43,9 +47,57 @@ public class Team {
         this.maxMembers = 10;
         this.totalKills = 0;
         this.totalDeaths = 0;
+
+        // Initialize ally system
+        this.allies = new HashSet<>();
+        this.allyInvites = new HashMap<>();
+        this.allyPermissions = new AllyPermissions();
     }
 
-    // Getters and Setters
+    // Ally Management
+    public boolean addAlly(UUID teamId) {
+        allyInvites.remove(teamId);
+        return allies.add(teamId);
+    }
+
+    public boolean removeAlly(UUID teamId) {
+        return allies.remove(teamId);
+    }
+
+    public boolean isAlly(UUID teamId) {
+        return allies.contains(teamId);
+    }
+
+    public Set<UUID> getAllies() {
+        return new HashSet<>(allies);
+    }
+
+    public void sendAllyInvite(UUID teamId) {
+        allyInvites.put(teamId, System.currentTimeMillis());
+    }
+
+    public boolean hasAllyInvite(UUID teamId) {
+        if (!allyInvites.containsKey(teamId)) {
+            return false;
+        }
+        // Invitations expire after 5 minutes
+        long inviteTime = allyInvites.get(teamId);
+        if (System.currentTimeMillis() - inviteTime > 300000) {
+            allyInvites.remove(teamId);
+            return false;
+        }
+        return true;
+    }
+
+    public void removeAllyInvite(UUID teamId) {
+        allyInvites.remove(teamId);
+    }
+
+    public AllyPermissions getAllyPermissions() {
+        return allyPermissions;
+    }
+
+    // Existing getters and setters
     public UUID getId() { return id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -116,7 +168,7 @@ public class Team {
 
     public boolean removeMember(UUID player) {
         if (player.equals(leader)) {
-            return false; // Cannot remove leader
+            return false;
         }
         moderators.remove(player);
         return members.remove(player);
@@ -154,7 +206,6 @@ public class Team {
         if (!invitations.containsKey(player)) {
             return false;
         }
-        // Invitations expire after 5 minutes
         long inviteTime = invitations.get(player);
         if (System.currentTimeMillis() - inviteTime > 300000) {
             invitations.remove(player);
@@ -200,6 +251,11 @@ public class Team {
         data.put("maxMembers", maxMembers);
         data.put("totalKills", totalKills);
         data.put("totalDeaths", totalDeaths);
+
+        // Serialize ally data
+        data.put("allies", allies.stream().map(UUID::toString).collect(Collectors.toList()));
+        data.put("allyPermissions", allyPermissions.serialize());
+
         return data;
     }
 
@@ -208,7 +264,6 @@ public class Team {
         Team team = new Team((String) data.get("name"), leader);
 
         if (data.containsKey("id")) {
-            // Use reflection to set the final id field
             try {
                 java.lang.reflect.Field idField = Team.class.getDeclaredField("id");
                 idField.setAccessible(true);
@@ -246,6 +301,19 @@ public class Team {
             modsList.forEach(uuid -> team.moderators.add(UUID.fromString(uuid)));
         }
 
+        // Deserialize ally data
+        if (data.containsKey("allies")) {
+            @SuppressWarnings("unchecked")
+            List<String> alliesList = (List<String>) data.get("allies");
+            alliesList.forEach(uuid -> team.allies.add(UUID.fromString(uuid)));
+        }
+
+        if (data.containsKey("allyPermissions")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> permsData = (Map<String, Object>) data.get("allyPermissions");
+            team.allyPermissions.deserialize(permsData);
+        }
+
         return team;
     }
 
@@ -260,5 +328,71 @@ public class Team {
     @Override
     public int hashCode() {
         return Objects.hash(id);
+    }
+
+    // Inner class for ally permissions
+    public static class AllyPermissions {
+        private boolean canBreakBlocks;
+        private boolean canPlaceBlocks;
+        private boolean canUseContainers;
+        private boolean canUseDoors;
+        private boolean canInteractEntities;
+        private boolean canUseBuckets;
+        private boolean canUseButtons;
+
+        public AllyPermissions() {
+            // Default permissions - more restrictive
+            this.canBreakBlocks = false;
+            this.canPlaceBlocks = false;
+            this.canUseContainers = false;
+            this.canUseDoors = true;
+            this.canInteractEntities = false;
+            this.canUseBuckets = false;
+            this.canUseButtons = true;
+        }
+
+        // Getters and setters
+        public boolean canBreakBlocks() { return canBreakBlocks; }
+        public void setCanBreakBlocks(boolean canBreakBlocks) { this.canBreakBlocks = canBreakBlocks; }
+
+        public boolean canPlaceBlocks() { return canPlaceBlocks; }
+        public void setCanPlaceBlocks(boolean canPlaceBlocks) { this.canPlaceBlocks = canPlaceBlocks; }
+
+        public boolean canUseContainers() { return canUseContainers; }
+        public void setCanUseContainers(boolean canUseContainers) { this.canUseContainers = canUseContainers; }
+
+        public boolean canUseDoors() { return canUseDoors; }
+        public void setCanUseDoors(boolean canUseDoors) { this.canUseDoors = canUseDoors; }
+
+        public boolean canInteractEntities() { return canInteractEntities; }
+        public void setCanInteractEntities(boolean canInteractEntities) { this.canInteractEntities = canInteractEntities; }
+
+        public boolean canUseBuckets() { return canUseBuckets; }
+        public void setCanUseBuckets(boolean canUseBuckets) { this.canUseBuckets = canUseBuckets; }
+
+        public boolean canUseButtons() { return canUseButtons; }
+        public void setCanUseButtons(boolean canUseButtons) { this.canUseButtons = canUseButtons; }
+
+        public Map<String, Object> serialize() {
+            Map<String, Object> data = new HashMap<>();
+            data.put("canBreakBlocks", canBreakBlocks);
+            data.put("canPlaceBlocks", canPlaceBlocks);
+            data.put("canUseContainers", canUseContainers);
+            data.put("canUseDoors", canUseDoors);
+            data.put("canInteractEntities", canInteractEntities);
+            data.put("canUseBuckets", canUseBuckets);
+            data.put("canUseButtons", canUseButtons);
+            return data;
+        }
+
+        public void deserialize(Map<String, Object> data) {
+            this.canBreakBlocks = (Boolean) data.getOrDefault("canBreakBlocks", false);
+            this.canPlaceBlocks = (Boolean) data.getOrDefault("canPlaceBlocks", false);
+            this.canUseContainers = (Boolean) data.getOrDefault("canUseContainers", false);
+            this.canUseDoors = (Boolean) data.getOrDefault("canUseDoors", true);
+            this.canInteractEntities = (Boolean) data.getOrDefault("canInteractEntities", false);
+            this.canUseBuckets = (Boolean) data.getOrDefault("canUseBuckets", false);
+            this.canUseButtons = (Boolean) data.getOrDefault("canUseButtons", true);
+        }
     }
 }

@@ -226,6 +226,53 @@ public class TeamManager {
         plugin.getLogger().info("Loaded " + teams.size() + " teams");
     }
 
+    /**
+     * Check if two players are allies (either teammates or on allied teams)
+     */
+    public boolean areAllies(UUID player1, UUID player2) {
+        Team team1 = getPlayerTeam(player1);
+        Team team2 = getPlayerTeam(player2);
+
+        if (team1 == null || team2 == null) {
+            return false;
+        }
+
+        // Same team = allies
+        if (team1.equals(team2)) {
+            return true;
+        }
+
+        // Check if teams are allies
+        return team1.isAlly(team2.getId());
+    }
+
+    /**
+     * Check if a player's team is allied with a specific team
+     */
+    public boolean isPlayerAlliedWith(UUID playerId, UUID teamId) {
+        Team playerTeam = getPlayerTeam(playerId);
+
+        if (playerTeam == null) {
+            return false;
+        }
+
+        return playerTeam.isAlly(teamId);
+    }
+
+    /**
+     * Broadcast message to team leadership (leader and moderators only)
+     */
+    public void broadcastToTeamLeadership(Team team, String message) {
+        for (UUID memberId : team.getMembers()) {
+            if (team.isLeader(memberId) || team.isModerator(memberId)) {
+                Player player = Bukkit.getPlayer(memberId);
+                if (player != null && player.isOnline()) {
+                    player.sendMessage(message);
+                }
+            }
+        }
+    }
+
     public void broadcastToTeam(Team team, String message) {
         for (UUID memberId : team.getMembers()) {
             Player player = Bukkit.getPlayer(memberId);
@@ -235,6 +282,11 @@ public class TeamManager {
         }
     }
 
+
+
+    /**
+     * Get formatted team info including allies
+     */
     public String formatTeamInfo(Team team) {
         StringBuilder sb = new StringBuilder();
         sb.append(ChatColor.GOLD).append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
@@ -248,6 +300,20 @@ public class TeamManager {
         sb.append(ChatColor.GRAY).append("Members: ").append(ChatColor.WHITE)
                 .append(team.getMemberCount()).append("/").append(team.getMaxMembers()).append("\n");
 
+        // Add allies section
+        Set<UUID> allies = team.getAllies();
+        if (!allies.isEmpty()) {
+            sb.append(ChatColor.GRAY).append("Allies: ").append(ChatColor.LIGHT_PURPLE);
+            List<String> allyNames = new ArrayList<>();
+            for (UUID allyId : allies) {
+                Team allyTeam = getTeam(allyId);
+                if (allyTeam != null) {
+                    allyNames.add(allyTeam.getDisplayName());
+                }
+            }
+            sb.append(String.join(", ", allyNames)).append("\n");
+        }
+
         sb.append(ChatColor.GRAY).append("Statistics:\n");
         sb.append(ChatColor.WHITE).append("  Kills: ").append(ChatColor.GREEN).append(team.getTotalKills()).append("\n");
         sb.append(ChatColor.WHITE).append("  Deaths: ").append(ChatColor.RED).append(team.getTotalDeaths()).append("\n");
@@ -257,6 +323,8 @@ public class TeamManager {
         sb.append(ChatColor.GRAY).append("Settings:\n");
         sb.append(ChatColor.WHITE).append("  Friendly Fire: ")
                 .append(team.isFriendlyFire() ? ChatColor.RED + "Enabled" : ChatColor.GREEN + "Disabled").append("\n");
+        sb.append(ChatColor.WHITE).append("  Alliances: ")
+                .append(team.isAllowAlliances() ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled").append("\n");
 
         sb.append(ChatColor.GOLD).append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
